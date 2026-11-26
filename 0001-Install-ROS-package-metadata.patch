@@ -1,0 +1,25 @@
+From 3dab7628d8124d96e5ff83a77362766385108c9c Mon Sep 17 00:00:00 2001
+From: Yoshiki Obinata <mqcmd196@hotmail.co.jp>
+Date: Thu, 26 Nov 2026 14:17:08 +0900
+Subject: [PATCH] Install ROS package metadata
+
+---
+ CMakeLists.txt | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 9cb4299..fecc47c 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -61,6 +61,8 @@ if (BUILD_EXAMPLES)
+ endif ()
+ 
+ ## Install the library
++install(FILES package.xml DESTINATION share/${PROJECT_NAME})
++
+ install(DIRECTORY include/
+     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+ 
+-- 
+2.43.0
+
