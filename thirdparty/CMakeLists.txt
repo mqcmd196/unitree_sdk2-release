@@ -1,35 +1,37 @@
 find_package(Threads REQUIRED)
+find_program(PATCHELF_EXECUTABLE patchelf)
+if(NOT PATCHELF_EXECUTABLE)
+    message(FATAL_ERROR "patchelf is required to isolate the bundled DDS libraries")
+endif()
 
-message(STATUS "Importing: ${CMAKE_CURRENT_LIST_DIR}/lib/${CMAKE_SYSTEM_PROCESSOR}/libddsc.so")
+# Patch build-tree copies; keep the upstream binaries unchanged.
+foreach(library ddsc ddscxx)
+    set(soname "libunitree_${library}.so.0")
+    set(output "${CMAKE_CURRENT_BINARY_DIR}/${soname}")
+    configure_file("lib/${CMAKE_SYSTEM_PROCESSOR}/lib${library}.so" "${output}" COPYONLY)
+    set(patch_args --set-soname "${soname}" --set-rpath "$ORIGIN")
+    if(library STREQUAL "ddscxx")
+        list(APPEND patch_args --replace-needed libddsc.so.0 libunitree_ddsc.so.0)
+    endif()
+    execute_process(COMMAND "${PATCHELF_EXECUTABLE}" ${patch_args} "${output}"
+        RESULT_VARIABLE patch_result)
+    if(NOT patch_result EQUAL 0)
+        message(FATAL_ERROR "Failed to isolate ${library}: ${patch_result}")
+    endif()
 
-add_library(ddsc SHARED IMPORTED GLOBAL)
-set_target_properties(ddsc PROPERTIES
-        IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/lib/${CMAKE_SYSTEM_PROCESSOR}/libddsc.so)
-set_target_properties(ddsc PROPERTIES IMPORTED_NO_SONAME TRUE)
-target_link_libraries(ddsc INTERFACE Threads::Threads)
-target_link_directories(ddsc INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/lib/${CMAKE_SYSTEM_PROCESSOR})
-target_include_directories(ddsc INTERFACE
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>)
+    add_library(unitree_${library} SHARED IMPORTED GLOBAL)
+    set_target_properties(unitree_${library} PROPERTIES
+        IMPORTED_LOCATION "${output}"
+        IMPORTED_SONAME "${soname}")
+    target_link_libraries(unitree_${library} INTERFACE Threads::Threads)
+    target_include_directories(unitree_${library} INTERFACE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include")
+    install(FILES "${output}" DESTINATION ${UNITREE_SDK_INSTALL_LIBDIR})
+endforeach()
 
-message(STATUS "Importing: ${CMAKE_CURRENT_LIST_DIR}/lib/${CMAKE_SYSTEM_PROCESSOR}/libddscxx.so")
+target_link_libraries(unitree_ddscxx INTERFACE unitree_ddsc)
+target_include_directories(unitree_ddscxx INTERFACE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/ddscxx")
 
-add_library(ddscxx SHARED IMPORTED GLOBAL)
-set_target_properties(ddscxx PROPERTIES
-        IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/lib/${CMAKE_SYSTEM_PROCESSOR}/libddscxx.so)
-set_target_properties(ddscxx PROPERTIES IMPORTED_NO_SONAME TRUE)
-target_link_libraries(ddscxx INTERFACE Threads::Threads)
-target_link_directories(ddscxx INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/lib/${CMAKE_SYSTEM_PROCESSOR})
-target_include_directories(ddscxx INTERFACE
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/ddscxx>
-        $<INSTALL_INTERFACE:include>
-        $<INSTALL_INTERFACE:include/ddscxx>)
-
-## Install targets
-file(GLOB DDS_LIBRARIES "${CMAKE_CURRENT_LIST_DIR}/lib/${CMAKE_SYSTEM_PROCESSOR}/*")
-
-install(FILES ${DDS_LIBRARIES} DESTINATION ${CMAKE_INSTALL_LIBDIR})
-
-install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/"
+    DESTINATION ${UNITREE_SDK_INSTALL_INCLUDEDIR})
