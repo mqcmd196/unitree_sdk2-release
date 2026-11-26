@@ -19,7 +19,7 @@ tracks:
     devel_branch: null
     name: unitree_sdk2
     patches: overlay
-    release_inc: '1'
+    release_inc: '2'
     last_version: 2.0.0
     last_release: 74e915b630758fe763f089528c3ff42d4396982e
     release_repo_url: git@github.com:mqcmd196/unitree_sdk2-release.git
