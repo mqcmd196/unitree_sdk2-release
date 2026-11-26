@@ -61,8 +61,6 @@ if (BUILD_EXAMPLES)
 endif ()
 
 ## Install the library
-install(FILES package.xml DESTINATION share/${PROJECT_NAME})
-
 install(DIRECTORY include/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
