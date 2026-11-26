@@ -1,5 +1,5 @@
-if(CMAKE_VERSION VERSION_LESS 3.13)
-  message(FATAL_ERROR "This file relies on consumers using CMake 3.13 or greater.")
+if(CMAKE_VERSION VERSION_LESS 3.5.0)
+  message(FATAL_ERROR "This file relies on consumers using CMake 3.5.0 or greater.")
 endif()
 cmake_policy(PUSH)
 cmake_policy(VERSION 2.6)
@@ -45,28 +45,27 @@ if(_IMPORT_PREFIX STREQUAL "/")
   set(_IMPORT_PREFIX "")
 endif()
 
-# Create imported targets for the private DDS libraries.
-add_library(unitree_ddsc SHARED IMPORTED GLOBAL)
-set_target_properties(unitree_ddsc PROPERTIES
-    IMPORTED_LOCATION "${_IMPORT_PREFIX}/@UNITREE_SDK_INSTALL_LIBDIR@/libunitree_ddsc.so.0"
-    INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/@UNITREE_SDK_INSTALL_INCLUDEDIR@"
+# Create imported target ddsc and ddscxx
+add_library(ddsc SHARED IMPORTED GLOBAL)
+set_target_properties(ddsc PROPERTIES
+    IMPORTED_LOCATION ${_IMPORT_PREFIX}/lib/libddsc.so
+    INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include;${_IMPORT_PREFIX}/include"
     INTERFACE_LINK_LIBRARIES "Threads::Threads"
-    IMPORTED_SONAME "libunitree_ddsc.so.0")
+    IMPORTED_NO_SONAME TRUE)
 
-add_library(unitree_ddscxx SHARED IMPORTED GLOBAL)
-set_target_properties(unitree_ddscxx PROPERTIES
-    IMPORTED_LOCATION "${_IMPORT_PREFIX}/@UNITREE_SDK_INSTALL_LIBDIR@/libunitree_ddscxx.so.0"
-    INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/@UNITREE_SDK_INSTALL_INCLUDEDIR@;${_IMPORT_PREFIX}/@UNITREE_SDK_INSTALL_INCLUDEDIR@/ddscxx"
-    INTERFACE_LINK_LIBRARIES "unitree_ddsc;Threads::Threads"
-    IMPORTED_SONAME "libunitree_ddscxx.so.0")
+add_library(ddscxx SHARED IMPORTED GLOBAL)
+set_target_properties(ddscxx PROPERTIES
+    IMPORTED_LOCATION ${_IMPORT_PREFIX}/lib/libddscxx.so
+    INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include;${_IMPORT_PREFIX}/include/ddscxx"
+    INTERFACE_LINK_LIBRARIES "Threads::Threads"
+    IMPORTED_NO_SONAME TRUE)
 
 # Create imported target unitree_sdk2
 add_library(unitree_sdk2 STATIC IMPORTED GLOBAL)
 set_target_properties(unitree_sdk2 PROPERTIES
-    IMPORTED_LOCATION "${_IMPORT_PREFIX}/@UNITREE_SDK_INSTALL_LIBDIR@/libunitree_sdk2.a"
-    INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/@UNITREE_SDK_INSTALL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES "unitree_ddsc;unitree_ddscxx;Threads::Threads"
-    INTERFACE_LINK_OPTIONS "-Wl,-rpath,${_IMPORT_PREFIX}/@UNITREE_SDK_INSTALL_LIBDIR@"
+    IMPORTED_LOCATION ${_IMPORT_PREFIX}/lib/libunitree_sdk2.a
+    INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include;${_IMPORT_PREFIX}/include"
+    INTERFACE_LINK_LIBRARIES "ddsc;ddscxx;Threads::Threads"
     LINKER_LANGUAGE CXX
 )
 

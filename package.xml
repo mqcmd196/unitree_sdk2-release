@@ -9,7 +9,6 @@
   <license>BSD-3-Clause</license>
 
   <buildtool_depend>cmake</buildtool_depend>
-  <build_depend>patchelf</build_depend>
 
   <depend>yaml-cpp</depend>
   <depend>eigen</depend>
