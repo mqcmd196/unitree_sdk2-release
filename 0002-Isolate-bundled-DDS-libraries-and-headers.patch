@@ -1,0 +1,211 @@
+From 161fc3644a721335251bd3deb8755f21a1820c19 Mon Sep 17 00:00:00 2001
+From: Yoshiki Obinata <mqcmd196@hotmail.co.jp>
+Date: Thu, 26 Nov 2026 14:52:36 +0900
+Subject: [PATCH 2/2] Isolate bundled DDS libraries and headers
+
+---
+ CMakeLists.txt                  | 15 ++++---
+ cmake/unitree_sdk2Targets.cmake | 35 ++++++++--------
+ package.xml                     |  1 +
+ thirdparty/CMakeLists.txt       | 72 +++++++++++++++++----------------
+ 4 files changed, 65 insertions(+), 58 deletions(-)
+ rewrite thirdparty/CMakeLists.txt (97%)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index fecc47c..678e0ff 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,4 +1,4 @@
+-cmake_minimum_required(VERSION 3.5)
++cmake_minimum_required(VERSION 3.13)
+ project(unitree_sdk2 VERSION 2.0.0)
+ 
+ ## Project Options
+@@ -22,6 +22,8 @@ endif ()
+ 
+ ## Use GNUInstallDirs to install libraries into correct locations on all platforms.
+ include(GNUInstallDirs)
++set(UNITREE_SDK_INSTALL_LIBDIR "opt/${PROJECT_NAME}/lib")
++set(UNITREE_SDK_INSTALL_INCLUDEDIR "opt/${PROJECT_NAME}/include")
+ 
+ ## Put all binary files into /bin and libraries into /lib
+ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+@@ -51,10 +53,10 @@ find_package(Threads REQUIRED)
+ add_library(unitree_sdk2 STATIC IMPORTED GLOBAL)
+ set_target_properties(unitree_sdk2 PROPERTIES
+         IMPORTED_LOCATION ${UNITREE_SDK_LIB})
+-target_link_libraries(unitree_sdk2 INTERFACE ddsc ddscxx Threads::Threads)
++target_link_libraries(unitree_sdk2 INTERFACE unitree_ddsc unitree_ddscxx Threads::Threads)
+ target_include_directories(unitree_sdk2 INTERFACE
+         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+-        $<INSTALL_INTERFACE:include>)
++        $<INSTALL_INTERFACE:${UNITREE_SDK_INSTALL_INCLUDEDIR}>)
+ 
+ if (BUILD_EXAMPLES)
+     add_subdirectory(example)
+@@ -64,12 +66,13 @@ endif ()
+ install(FILES package.xml DESTINATION share/${PROJECT_NAME})
+ 
+ install(DIRECTORY include/
+-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
++    DESTINATION ${UNITREE_SDK_INSTALL_INCLUDEDIR})
+ 
+ install(FILES ${UNITREE_SDK_LIB}
+-    DESTINATION ${CMAKE_INSTALL_LIBDIR})
++    DESTINATION ${UNITREE_SDK_INSTALL_LIBDIR})
+ 
+-install(FILES cmake/unitree_sdk2Targets.cmake
++configure_file(cmake/unitree_sdk2Targets.cmake unitree_sdk2Targets.cmake @ONLY)
++install(FILES "${CMAKE_CURRENT_BINARY_DIR}/unitree_sdk2Targets.cmake"
+     DESTINATION lib/cmake/unitree_sdk2)
+ 
+ include(CMakePackageConfigHelpers)
+diff --git a/cmake/unitree_sdk2Targets.cmake b/cmake/unitree_sdk2Targets.cmake
+index 5f401ae..85db182 100644
+--- a/cmake/unitree_sdk2Targets.cmake
++++ b/cmake/unitree_sdk2Targets.cmake
+@@ -1,5 +1,5 @@
+-if(CMAKE_VERSION VERSION_LESS 3.5.0)
+-  message(FATAL_ERROR "This file relies on consumers using CMake 3.5.0 or greater.")
++if(CMAKE_VERSION VERSION_LESS 3.13)
++  message(FATAL_ERROR "This file relies on consumers using CMake 3.13 or greater.")
+ endif()
+ cmake_policy(PUSH)
+ cmake_policy(VERSION 2.6)
+@@ -45,27 +45,28 @@ if(_IMPORT_PREFIX STREQUAL "/")
+   set(_IMPORT_PREFIX "")
+ endif()
+ 
+-# Create imported target ddsc and ddscxx
+-add_library(ddsc SHARED IMPORTED GLOBAL)
+-set_target_properties(ddsc PROPERTIES
+-    IMPORTED_LOCATION ${_IMPORT_PREFIX}/lib/libddsc.so
+-    INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include;${_IMPORT_PREFIX}/include"
++# Create imported targets for the private DDS libraries.
++add_library(unitree_ddsc SHARED IMPORTED GLOBAL)
++set_target_properties(unitree_ddsc PROPERTIES
++    IMPORTED_LOCATION "${_IMPORT_PREFIX}/@UNITREE_SDK_INSTALL_LIBDIR@/libunitree_ddsc.so.0"
++    INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/@UNITREE_SDK_INSTALL_INCLUDEDIR@"
+     INTERFACE_LINK_LIBRARIES "Threads::Threads"
+-    IMPORTED_NO_SONAME TRUE)
++    IMPORTED_SONAME "libunitree_ddsc.so.0")
+ 
+-add_library(ddscxx SHARED IMPORTED GLOBAL)
+-set_target_properties(ddscxx PROPERTIES
+-    IMPORTED_LOCATION ${_IMPORT_PREFIX}/lib/libddscxx.so
+-    INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include;${_IMPORT_PREFIX}/include/ddscxx"
+-    INTERFACE_LINK_LIBRARIES "Threads::Threads"
+-    IMPORTED_NO_SONAME TRUE)
++add_library(unitree_ddscxx SHARED IMPORTED GLOBAL)
++set_target_properties(unitree_ddscxx PROPERTIES
++    IMPORTED_LOCATION "${_IMPORT_PREFIX}/@UNITREE_SDK_INSTALL_LIBDIR@/libunitree_ddscxx.so.0"
++    INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/@UNITREE_SDK_INSTALL_INCLUDEDIR@;${_IMPORT_PREFIX}/@UNITREE_SDK_INSTALL_INCLUDEDIR@/ddscxx"
++    INTERFACE_LINK_LIBRARIES "unitree_ddsc;Threads::Threads"
++    IMPORTED_SONAME "libunitree_ddscxx.so.0")
+ 
+ # Create imported target unitree_sdk2
+ add_library(unitree_sdk2 STATIC IMPORTED GLOBAL)
+ set_target_properties(unitree_sdk2 PROPERTIES
+-    IMPORTED_LOCATION ${_IMPORT_PREFIX}/lib/libunitree_sdk2.a
+-    INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include;${_IMPORT_PREFIX}/include"
+-    INTERFACE_LINK_LIBRARIES "ddsc;ddscxx;Threads::Threads"
++    IMPORTED_LOCATION "${_IMPORT_PREFIX}/@UNITREE_SDK_INSTALL_LIBDIR@/libunitree_sdk2.a"
++    INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/@UNITREE_SDK_INSTALL_INCLUDEDIR@"
++    INTERFACE_LINK_LIBRARIES "unitree_ddsc;unitree_ddscxx;Threads::Threads"
++    INTERFACE_LINK_OPTIONS "-Wl,-rpath,${_IMPORT_PREFIX}/@UNITREE_SDK_INSTALL_LIBDIR@"
+     LINKER_LANGUAGE CXX
+ )
+ 
+diff --git a/package.xml b/package.xml
+index 2ceb37a..20802f8 100644
+--- a/package.xml
++++ b/package.xml
+@@ -9,6 +9,7 @@
+   <license>BSD-3-Clause</license>
+ 
+   <buildtool_depend>cmake</buildtool_depend>
++  <build_depend>patchelf</build_depend>
+ 
+   <depend>yaml-cpp</depend>
+   <depend>eigen</depend>
+diff --git a/thirdparty/CMakeLists.txt b/thirdparty/CMakeLists.txt
+dissimilarity index 97%
+index bb98b35..789d180 100644
+--- a/thirdparty/CMakeLists.txt
++++ b/thirdparty/CMakeLists.txt
+@@ -1,35 +1,37 @@
+-find_package(Threads REQUIRED)
+-
+-message(STATUS "Importing: ${CMAKE_CURRENT_LIST_DIR}/lib/${CMAKE_SYSTEM_PROCESSOR}/libddsc.so")
+-
+-add_library(ddsc SHARED IMPORTED GLOBAL)
+-set_target_properties(ddsc PROPERTIES
+-        IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/lib/${CMAKE_SYSTEM_PROCESSOR}/libddsc.so)
+-set_target_properties(ddsc PROPERTIES IMPORTED_NO_SONAME TRUE)
+-target_link_libraries(ddsc INTERFACE Threads::Threads)
+-target_link_directories(ddsc INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/lib/${CMAKE_SYSTEM_PROCESSOR})
+-target_include_directories(ddsc INTERFACE
+-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+-        $<INSTALL_INTERFACE:include>)
+-
+-message(STATUS "Importing: ${CMAKE_CURRENT_LIST_DIR}/lib/${CMAKE_SYSTEM_PROCESSOR}/libddscxx.so")
+-
+-add_library(ddscxx SHARED IMPORTED GLOBAL)
+-set_target_properties(ddscxx PROPERTIES
+-        IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/lib/${CMAKE_SYSTEM_PROCESSOR}/libddscxx.so)
+-set_target_properties(ddscxx PROPERTIES IMPORTED_NO_SONAME TRUE)
+-target_link_libraries(ddscxx INTERFACE Threads::Threads)
+-target_link_directories(ddscxx INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/lib/${CMAKE_SYSTEM_PROCESSOR})
+-target_include_directories(ddscxx INTERFACE
+-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/ddscxx>
+-        $<INSTALL_INTERFACE:include>
+-        $<INSTALL_INTERFACE:include/ddscxx>)
+-
+-## Install targets
+-file(GLOB DDS_LIBRARIES "${CMAKE_CURRENT_LIST_DIR}/lib/${CMAKE_SYSTEM_PROCESSOR}/*")
+-
+-install(FILES ${DDS_LIBRARIES} DESTINATION ${CMAKE_INSTALL_LIBDIR})
+-
+-install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/
+-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
++find_package(Threads REQUIRED)
++find_program(PATCHELF_EXECUTABLE patchelf)
++if(NOT PATCHELF_EXECUTABLE)
++    message(FATAL_ERROR "patchelf is required to isolate the bundled DDS libraries")
++endif()
++
++# Patch build-tree copies; keep the upstream binaries unchanged.
++foreach(library ddsc ddscxx)
++    set(soname "libunitree_${library}.so.0")
++    set(output "${CMAKE_CURRENT_BINARY_DIR}/${soname}")
++    configure_file("lib/${CMAKE_SYSTEM_PROCESSOR}/lib${library}.so" "${output}" COPYONLY)
++    set(patch_args --set-soname "${soname}" --set-rpath "$ORIGIN")
++    if(library STREQUAL "ddscxx")
++        list(APPEND patch_args --replace-needed libddsc.so.0 libunitree_ddsc.so.0)
++    endif()
++    execute_process(COMMAND "${PATCHELF_EXECUTABLE}" ${patch_args} "${output}"
++        RESULT_VARIABLE patch_result)
++    if(NOT patch_result EQUAL 0)
++        message(FATAL_ERROR "Failed to isolate ${library}: ${patch_result}")
++    endif()
++
++    add_library(unitree_${library} SHARED IMPORTED GLOBAL)
++    set_target_properties(unitree_${library} PROPERTIES
++        IMPORTED_LOCATION "${output}"
++        IMPORTED_SONAME "${soname}")
++    target_link_libraries(unitree_${library} INTERFACE Threads::Threads)
++    target_include_directories(unitree_${library} INTERFACE
++        "${CMAKE_CURRENT_SOURCE_DIR}/include")
++    install(FILES "${output}" DESTINATION ${UNITREE_SDK_INSTALL_LIBDIR})
++endforeach()
++
++target_link_libraries(unitree_ddscxx INTERFACE unitree_ddsc)
++target_include_directories(unitree_ddscxx INTERFACE
++    "${CMAKE_CURRENT_SOURCE_DIR}/include/ddscxx")
++
++install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/"
++    DESTINATION ${UNITREE_SDK_INSTALL_INCLUDEDIR})
+-- 
+2.43.0
+

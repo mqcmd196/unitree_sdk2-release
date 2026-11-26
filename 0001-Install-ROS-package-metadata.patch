@@ -1,7 +1,7 @@
-From 3dab7628d8124d96e5ff83a77362766385108c9c Mon Sep 17 00:00:00 2001
+From 66c7c800498116c79e018d1803e918d3662e9e44 Mon Sep 17 00:00:00 2001
 From: Yoshiki Obinata <mqcmd196@hotmail.co.jp>
 Date: Thu, 26 Nov 2026 14:17:08 +0900
-Subject: [PATCH] Install ROS package metadata
+Subject: [PATCH 1/2] Install ROS package metadata
 
 ---
  CMakeLists.txt | 2 ++
