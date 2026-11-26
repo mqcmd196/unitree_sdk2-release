@@ -1,0 +1,12 @@
+Source: ros-jazzy-unitree-sdk2
+Section: misc
+Priority: optional
+Maintainer: "Yoshiki Obinata" <mqcmd196@hotmail.co.jp>
+Build-Depends: debhelper (>= 9.0.0), cmake, libboost-all-dev, libeigen3-dev, libfmt-dev, libspdlog-dev, libyaml-cpp-dev, patchelf, ros-jazzy-ros-workspace
+Homepage: https://index.ros.org/p/unitree_sdk2/#jazzy
+Standards-Version: 3.9.2
+
+Package: ros-jazzy-unitree-sdk2
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libboost-all-dev, libeigen3-dev, libfmt-dev, libspdlog-dev, libyaml-cpp-dev, ros-jazzy-ros-workspace
+Description: Unitree SDK2: DDS-based communication library for Unitree robots (pre-built)
