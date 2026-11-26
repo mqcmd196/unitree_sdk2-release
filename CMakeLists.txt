@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.13)
 project(unitree_sdk2 VERSION 2.0.0)
 
 ## Project Options
@@ -22,6 +22,8 @@ endif ()
 
 ## Use GNUInstallDirs to install libraries into correct locations on all platforms.
 include(GNUInstallDirs)
+set(UNITREE_SDK_INSTALL_LIBDIR "opt/${PROJECT_NAME}/lib")
+set(UNITREE_SDK_INSTALL_INCLUDEDIR "opt/${PROJECT_NAME}/include")
 
 ## Put all binary files into /bin and libraries into /lib
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
@@ -51,10 +53,10 @@ find_package(Threads REQUIRED)
 add_library(unitree_sdk2 STATIC IMPORTED GLOBAL)
 set_target_properties(unitree_sdk2 PROPERTIES
         IMPORTED_LOCATION ${UNITREE_SDK_LIB})
-target_link_libraries(unitree_sdk2 INTERFACE ddsc ddscxx Threads::Threads)
+target_link_libraries(unitree_sdk2 INTERFACE unitree_ddsc unitree_ddscxx Threads::Threads)
 target_include_directories(unitree_sdk2 INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>)
+        $<INSTALL_INTERFACE:${UNITREE_SDK_INSTALL_INCLUDEDIR}>)
 
 if (BUILD_EXAMPLES)
     add_subdirectory(example)
@@ -64,12 +66,13 @@ endif ()
 install(FILES package.xml DESTINATION share/${PROJECT_NAME})
 
 install(DIRECTORY include/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+    DESTINATION ${UNITREE_SDK_INSTALL_INCLUDEDIR})
 
 install(FILES ${UNITREE_SDK_LIB}
-    DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    DESTINATION ${UNITREE_SDK_INSTALL_LIBDIR})
 
-install(FILES cmake/unitree_sdk2Targets.cmake
+configure_file(cmake/unitree_sdk2Targets.cmake unitree_sdk2Targets.cmake @ONLY)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/unitree_sdk2Targets.cmake"
     DESTINATION lib/cmake/unitree_sdk2)
 
 include(CMakePackageConfigHelpers)
